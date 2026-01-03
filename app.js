@@ -6,7 +6,7 @@ const PORT = 3000;
 const headerRoutes = require('./routes/headers');
 const serverRoutes = require('./routes/server');
 const cookieRoutes = require('./routes/cookies');
-
+""
 // Middleware de Validação Global (opcional, para não repetir em cada arquivo)
 const validateUrl = (req, res, next) => {
     const { url } = req.query;
