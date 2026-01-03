@@ -1,0 +1,25 @@
+{
+  "name": "check-security-web",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tcc-joseleandro/check-security-web.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/tcc-joseleandro/check-security-web/issues"
+  },
+  "homepage": "https://github.com/tcc-joseleandro/check-security-web#readme",
+  "dependencies": {
+    "axios": "^1.13.2",
+    "express": "^5.2.1",
+    "helmet": "^8.1.0"
+  }
+}
