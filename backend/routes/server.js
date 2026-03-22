@@ -14,8 +14,8 @@ router.get('/', async (req, res) => {
             category: "Server Fingerprinting",
             url: url,
             details: {
-                server_header: h['server'] || "Não exposto (Bom)",
-                x_powered_by: h['x-powered-by'] || "Não exposto (Bom)"
+                server_header: h['server'] || "Não exposto",
+                x_powered_by: h['x-powered-by'] || "Não exposto"
             },
             is_exposed: !!(h['server'] || h['x-powered-by']),
             recommendation: "Se possível, oculte esses headers para dificultar o reconhecimento por atacantes."

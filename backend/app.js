@@ -17,6 +17,9 @@ const validateUrl = (req, res, next) => {
     });
 };
 
+const cors = require('cors');
+app.use(cors()); // Libera o acesso para o React
+
 // Aplicando as rotas com seus respectivos prefixos
 app.use('/check/headers', validateUrl, headerRoutes);
 app.use('/check/server', validateUrl, serverRoutes);

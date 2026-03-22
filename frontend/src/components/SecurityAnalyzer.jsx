@@ -81,15 +81,91 @@ const SecurityCheckApp = () => {
   );
 };
 
-const ResultCard = ({ title, icon, data }) => (
-  <div style={{ border: '1px solid #e5e7eb', borderRadius: '8px', padding: '20px', backgroundColor: '#f9fafb' }}>
-    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px', color: '#374151' }}>
-      {icon} <strong style={{ fontSize: '1.1rem' }}>{title}</strong>
+const ResultCard = ({ title, icon, data }) => {
+  // Função para renderizar o conteúdo baseado no título do Card
+  const renderContent = () => {
+    if (!data) return <p style={{ color: '#64748b' }}>Aguardando busca...</p>;
+
+    switch (title) {
+      case 'Headers':
+        const { hsts, csp, xFrame } = data.data || {};
+        return (
+          <div style={listStyle}>
+            <p><strong>HSTS:</strong> {String(hsts)}</p>
+            <p><strong>CSP:</strong> {String(csp)}</p>
+            <p><strong>X-Frame:</strong> {String(xFrame)}</p>
+          </div>
+        );
+
+      case 'Server':
+        const { server_header, x_powered_by } = data.details || {};
+        return (
+          <div style={listStyle}>
+            <p><strong>Server Header:</strong> {server_header}</p>
+            <p><strong>X-Powered-By:</strong> {x_powered_by}</p>
+          </div>
+        );
+
+      case 'Cookies':
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+            <p style={{ fontSize: '0.8rem', color: '#fca5a5', marginTop: '10px' }}>
+              <em>{data.verdict}</em>
+            </p>
+            {data.cookies?.map((cookie, idx) => (
+              <div key={idx} style={cookieBoxStyle}>
+                <strong style={{ color: '#38bdf8', display: 'block', marginBottom: '5px' }}>
+                  {cookie.name}
+                </strong>
+                <div style={{ fontSize: '0.85rem', opacity: 0.9 }}>
+                  <span><strong>Secure:</strong> {String(cookie.secure)}</span> | 
+                  <span> <strong>HttpOnly:</strong> {String(cookie.httpOnly)}</span> | 
+                  <span> <strong>SameSite:</strong> {String(cookie.sameSite)}</span>
+                </div>
+              </div>
+            ))}
+
+          </div>
+        );
+
+      default:
+        return <pre>{JSON.stringify(data, null, 2)}</pre>;
+    }
+  };
+
+  return (
+    <div style={cardStyle}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+        {icon} <strong style={{ fontSize: '1.2rem' }}>{title}</strong>
+      </div>
+      {renderContent()}
     </div>
-    <pre style={{ fontSize: '0.85rem', overflowX: 'auto', backgroundColor: '#fff', padding: '10px', borderRadius: '4px', border: '1px solid #eee' }}>
-      {data ? JSON.stringify(data, null, 2) : 'Aguardando busca...'}
-    </pre>
-  </div>
-);
+  );
+};
+
+// --- Estilos Auxiliares (Coloque fora do componente ou no topo do arquivo) ---
+
+const cardStyle = {
+  border: '1px solid #334155',
+  borderRadius: '12px',
+  padding: '24px',
+  backgroundColor: '#1e293b',
+  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)',
+  color: '#f8fafc',
+  height: 'fit-content'
+};
+
+const listStyle = {
+  lineHeight: '1.8',
+  fontSize: '0.95rem',
+  color: '#e2e8f0'
+};
+
+const cookieBoxStyle = {
+  backgroundColor: '#0f172a',
+  padding: '12px',
+  borderRadius: '8px',
+  borderLeft: '4px solid #38bdf8'
+};
 
 export default SecurityCheckApp;
