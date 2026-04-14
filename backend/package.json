@@ -4,7 +4,8 @@
   "description": "",
   "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "node app.js"
   },
   "repository": {
     "type": "git",
@@ -18,9 +19,11 @@
   },
   "homepage": "https://github.com/tcc-joseleandro/check-security-web#readme",
   "dependencies": {
+    "adm-zip": "^0.5.17",
     "axios": "^1.13.2",
     "cors": "^2.8.6",
     "express": "^5.2.1",
-    "helmet": "^8.1.0"
+    "helmet": "^8.1.0",
+    "multer": "^2.1.1"
   }
 }
