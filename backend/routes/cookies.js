@@ -9,14 +9,13 @@ router.get('/', async (req, res) => {
         const response = await axios.get(url, { timeout: 5000 });
         const cookies = response.headers['set-cookie'] || [];
 
-        // Mapeia cada cookie encontrado e verifica as flags de segurança
         const analysis = cookies.map(cookie => {
-            const cookieLower = cookie.toLowerCase();
+            const parts = cookie.split(';').map(p => p.trim().toLowerCase());
             return {
                 name: cookie.split('=')[0],
-                secure: cookieLower.includes('secure'),     // Garante envio apenas via HTTPS
-                httpOnly: cookieLower.includes('httponly'), // Impede roubo via JavaScript (XSS)
-                sameSite: cookieLower.includes('samesite')  // Protege contra ataques CSRF
+                secure: parts.includes('secure'),
+                httpOnly: parts.includes('httponly'),
+                sameSite: parts.find(p => p.startsWith('samesite'))?.split('=')[1] || "não definido"
             };
         });
 
@@ -24,9 +23,10 @@ router.get('/', async (req, res) => {
             category: "Cookie Security Audit",
             total_found: cookies.length,
             cookies: analysis,
+            // O veredito ajuda na exportação para destacar riscos rapidamente
             verdict: analysis.every(c => c.secure && c.httpOnly) 
-                ? "Cookies seguem boas práticas." 
-                : "Atenção: Existem cookies sem flags de segurança ativas."
+                ? "Seguro" 
+                : "Vulnerável"
         });
     } catch (err) {
         res.status(500).json({ error: "Erro ao analisar cookies", details: err.message });
