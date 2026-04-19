@@ -6,35 +6,24 @@ const path = require('path');
 const AdmZip = require('adm-zip');
 const router = express.Router();
 
-// Configuração do Multer
 const upload = multer({ dest: 'uploads/' });
 
 router.post('/', upload.single('file'), (req, res) => {
-    if (!req.file) {
-        return res.status(400).json({ error: "Nenhum arquivo enviado." });
-    }
+    if (!req.file) return res.status(400).json({ error: "Nenhum arquivo enviado." });
 
     const zipPath = req.file.path;
-    const extractPath = path.join(__dirname, '..', 'temp_extract', req.file.filename);
-    const jsonOutput = path.join(__dirname, '..', `result-${req.file.filename}.json`);
+    const extractPath = path.resolve(__dirname, '..', 'temp_extract', req.file.filename);
+    const jsonOutput = path.resolve(__dirname, '..', `result-${req.file.filename}.json`);
 
     try {
-        // 1. Extrair o arquivo ZIP
         const zip = new AdmZip(zipPath);
         if (!fs.existsSync(extractPath)) fs.mkdirSync(extractPath, { recursive: true });
         zip.extractAllTo(extractPath, true);
 
-        // 2. Comando Horusec:
-        // -p: pasta a ser analisada
-        // -o: formato de saída (json)
-        // -O: caminho do arquivo de saída
-        // --log-level=error: para não sujar o stdout
-        const command = `horusec start -p="${extractPath}" -o="json" -O="${jsonOutput}" --log-level=error`;
+        // Execução nativa do Horusec dentro do container
+        const command = `horusec start -p="${extractPath}" -o="json" -O="${jsonOutput}" --log-level=error --disable-docker`;
 
-        exec(command, { maxBuffer: 1024 * 10000 }, (error) => {
-            // O Horusec pode retornar erro de execução se encontrar vulnerabilidades, 
-            // por isso focamos em verificar se o arquivo de saída foi gerado.
-            
+        exec(command, { maxBuffer: 1024 * 10000 }, (error, stdout, stderr) => {
             if (!fs.existsSync(jsonOutput)) {
                 return res.status(500).json({ error: "O Horusec não gerou o relatório." });
             }
@@ -42,37 +31,38 @@ router.post('/', upload.single('file'), (req, res) => {
             try {
                 const fileContent = fs.readFileSync(jsonOutput, 'utf8');
                 const data = JSON.parse(fileContent);
-                
-                // 3. Mapear o formato do Horusec para o seu Frontend
-                // O Horusec estrutura os dados em data.analysisVulnerabilities
-                const vulnerabilities = data.analysisVulnerabilities || [];
+                const vulnerabilities = data.analysisVulnerabilities || data.vulnerabilities || [];
                 
                 const report = {
                     total_issues: vulnerabilities.length,
-                    issues: vulnerabilities.map(vuln => ({
-                        title: vuln.vulnerabilities.rule_id || "Vulnerabilidade Detectada",
-                        description: vuln.vulnerabilities.details,
-                        file: vuln.vulnerabilities.file.replace(extractPath, ''), // Limpa o path interno
-                        line: vuln.vulnerabilities.line,
-                        severity: vuln.vulnerabilities.severity.toLowerCase() // 'high', 'medium', etc.
-                    }))
+                    issues: vulnerabilities.map(vuln => {
+                        const v = vuln.vulnerabilities || {};
+                        
+                        return {
+                            title: v.rule_id || "Vulnerabilidade Detectada",
+                            description: v.details || "Sem descrição técnica.",
+                            file: v.file?.replace(extractPath, '') || "Desconhecido",
+                            line: v.line || "0",
+                            severity: (v.severity || "LOW").toLowerCase()
+                            // Removido o cve_link, pois o React tratará os links na descrição
+                        };
+                    })
                 };
 
-                // Limpeza total
-                fs.unlinkSync(zipPath);
-                fs.rmSync(extractPath, { recursive: true, force: true });
-                fs.unlinkSync(jsonOutput);
+                // Limpeza assíncrona
+                setTimeout(() => {
+                    if (fs.existsSync(zipPath)) fs.unlinkSync(zipPath);
+                    if (fs.existsSync(jsonOutput)) fs.unlinkSync(jsonOutput);
+                    if (fs.existsSync(extractPath)) fs.rmSync(extractPath, { recursive: true, force: true });
+                }, 2000);
 
                 res.json(report);
-
-            } catch (parseError) {
-                res.status(500).json({ error: "Erro ao ler o relatório do Horusec." });
+            } catch (err) {
+                res.status(500).json({ error: "Erro ao processar JSON." });
             }
         });
-
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Falha técnica na análise do arquivo." });
+        res.status(500).json({ error: "Erro na extração do ZIP." });
     }
 });
 

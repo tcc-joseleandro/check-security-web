@@ -1,49 +1,89 @@
 const express = require('express');
 const { exec } = require('child_process');
-const path = require('path');
 const router = express.Router();
 
-// Alteramos de .get para .post para coincidir com o app.js e o frontend
+// Rota POST: /container/scan (ou conforme definido no seu index.js)
 router.post('/', (req, res) => {
-    // Agora pegamos 'image' do req.body (JSON enviado pelo Axios)
-    const { image } = req.body;
+    const { image, scanner } = req.body;
 
+    // Validação básica
     if (!image) {
-        return res.status(400).json({ error: "O nome da imagem Docker é obrigatório no corpo da requisição." });
+        return res.status(400).json({ 
+            error: "O nome da imagem Docker é obrigatório." 
+        });
     }
 
-    // Comando do Scout focado em CVEs (Vulnerabilidades)
-    const command = `docker-scout cves ${image} --format json`;
-
-    // maxBuffer aumentado para suportar relatórios JSON grandes
+    // Seleção do comando baseada na escolha do Frontend
+    let command = '';
+    if (scanner === 'trivy') {
+        // Formato JSON, filtrando apenas vulnerabilidades de severidade relevante
+        command = `trivy image --format json --severity CRITICAL,HIGH,MEDIUM ${image}`;
+    } else {
+        // Comando padrão do Docker Scout
+        command = `docker-scout cves ${image} --format json`;
+    }
+    console.log(`[LOG] Executando ${scanner} para a imagem: ${image}`);
     exec(command, { maxBuffer: 1024 * 10000 }, (error, stdout, stderr) => {
-        // Log para você ver no terminal do VS Code o que o Scout respondeu
-        console.log("Saída do Scout:", stdout);
-
         if (error && !stdout) {
             return res.status(500).json({ 
-                error: "Erro na análise da imagem", 
+                error: `Erro ao executar o scanner ${scanner}`, 
                 details: stderr || error.message 
-            });
-        }
-
-        // Verificação extra: se o stdout não começa com '{' ou '[', não é JSON
-        if (!stdout.trim().startsWith('{') && !stdout.trim().startsWith('[')) {
-            return res.status(500).json({ 
-                error: "O Docker Scout retornou um erro de texto em vez de JSON", 
-                details: stdout.trim() 
             });
         }
 
         try {
             const scanData = JSON.parse(stdout);
-            // ... resto do seu mapeamento do report ...
+            let report = {
+                image: image,
+                scanner_used: scanner === 'trivy' ? 'Trivy' : 'Docker Scout',
+                critical: 0,
+                high: 0,
+                medium: 0
+            };
+
+            // --- Lógica de Parse do TRIVY ---
+            if (scanner === 'trivy') {
+                if (scanData.Results && Array.isArray(scanData.Results)) {
+                    scanData.Results.forEach(target => {
+                        if (target.Vulnerabilities) {
+                            target.Vulnerabilities.forEach(v => {
+                                const sev = v.Severity.toUpperCase();
+                                if (sev === 'CRITICAL') report.critical++;
+                                else if (sev === 'HIGH') report.high++;
+                                else if (sev === 'MEDIUM') report.medium++;
+                            });
+                        }
+                    });
+                }
+            } 
+            // --- Lógica de Parse do DOCKER SCOUT ---
+            else {
+                // Tenta ler do sumário (mais comum em versões recentes)
+                if (scanData.summary) {
+                    report.critical = scanData.summary.critical || 0;
+                    report.high = scanData.summary.high || 0;
+                    report.medium = scanData.summary.medium || 0;
+                } 
+                // Fallback para varredura manual de objetos se o sumário não existir
+                else if (scanData.runs && scanData.runs[0].results) {
+                    scanData.runs[0].results.forEach(res => {
+                        const score = res.properties?.['security-severity'] || 0;
+                        if (score >= 9.0) report.critical++;
+                        else if (score >= 7.0) report.high++;
+                        else if (score >= 4.0) report.medium++;
+                    });
+                }
+            }
+
+            // Retorna o relatório consolidado
             res.json(report);
+
         } catch (parseError) {
+            console.error("Erro no Parse JSON:", parseError);
             res.status(500).json({ 
-                error: "Erro ao processar dados do Scout", 
-                details: parseError.message,
-                rawOutput: stdout.substring(0, 100) // Mostra o início do erro
+                error: "Falha ao processar os dados da análise", 
+                details: "O scanner não retornou um JSON válido.",
+                rawPrefix: stdout ? stdout.substring(0, 150) : "Nenhuma saída"
             });
         }
     });

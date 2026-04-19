@@ -146,26 +146,26 @@ const ResultCard = ({ title, icon, data }) => {
 // --- Estilos Auxiliares (Coloque fora do componente ou no topo do arquivo) ---
 
 const cardStyle = {
-  border: '1px solid #334155',
-  borderRadius: '12px',
-  padding: '24px',
   backgroundColor: '#1e293b',
-  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)',
+  padding: '25px',
+  borderRadius: '16px',
+  border: '1px solid #334155',
   color: '#f8fafc',
-  height: 'fit-content'
+  textAlign: 'left'
 };
 
 const listStyle = {
-  lineHeight: '1.8',
-  fontSize: '0.95rem',
-  color: '#e2e8f0'
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '10px',
+  fontSize: '0.9rem'
 };
 
 const cookieBoxStyle = {
   backgroundColor: '#0f172a',
   padding: '12px',
   borderRadius: '8px',
-  borderLeft: '4px solid #38bdf8'
+  border: '1px solid #334155'
 };
 
 export default SecurityCheckApp;
