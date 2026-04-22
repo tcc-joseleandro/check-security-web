@@ -3,22 +3,29 @@ const cors = require('cors');
 const app = express();
 const PORT = 3000;
 
-// Importando os módulos de rotas
+// --- Importação dos Módulos de Rotas ---
 const headerRoutes = require('./routes/headers');
 const serverRoutes = require('./routes/server');
 const cookieRoutes = require('./routes/cookies');
 const dockerAnalysis = require('./routes/dockerAnalysis');
 const wafScan = require('./routes/wafScan');
-const sastScan = require('./routes/sastScan'); // Import da nova rota SAST
+const sastScan = require('./routes/sastScan');
 
 // --- Middlewares Globais ---
 
+// CORS: Permite que o seu Frontend (geralmente na porta 5173 ou 3000) acesse a API
 app.use(cors()); 
-app.use(express.json()); // Permite ler o JSON do Axios/Postman
 
-// Middleware de Validação para URLs (Headers, Cookies, WAF)
+// Permite que o Express entenda o corpo das requisições em formato JSON
+app.use(express.json()); 
+
+// --- Middlewares de Validação ---
+
+/**
+ * Validação para ferramentas de análise de URL (Headers, Cookies e WAF)
+ * Garante que a URL seja enviada e que utilize o protocolo seguro HTTPS.
+ */
 const validateUrl = (req, res, next) => {
-    // O ?. evita o erro "Cannot read properties of undefined"
     const url = req.body?.url || req.query?.url;
 
     if (url && typeof url === 'string' && url.startsWith('https://')) {
@@ -30,18 +37,30 @@ const validateUrl = (req, res, next) => {
     });
 };
 
-// Middleware de Validação para Docker (Imagem e Tipo de Scanner)
+/**
+ * Validação para ferramentas de Infra (Docker)
+ * Verifica se a imagem foi informada e se o scanner solicitado é válido.
+ */
 const validateDockerParams = (req, res, next) => {
-    const { image, scanner } = req.body;
+    const { image, scanner, username, password } = req.body;
     
     if (!image || image.trim().length === 0) {
         return res.status(400).json({ error: "O nome da imagem Docker é obrigatório." });
     }
     
-    // Valida se o scanner enviado é um dos permitidos
     const validScanners = ['trivy', 'docker-scout'];
     if (scanner && !validScanners.includes(scanner)) {
         return res.status(400).json({ error: "Scanner inválido. Use 'trivy' ou 'docker-scout'." });
+    }
+
+    // Se o usuário optar pelo Docker Scout e preencher um dos campos de login,
+    // garantimos que ele preencha ambos (User e PAT)
+    if (scanner === 'docker-scout' && (username || password)) {
+        if (!username || !password) {
+            return res.status(400).json({ 
+                error: "Para autenticação no Scout, informe tanto o Username quanto o Personal Access Token (PAT)." 
+            });
+        }
     }
 
     next();
@@ -49,22 +68,28 @@ const validateDockerParams = (req, res, next) => {
 
 // --- Aplicação das Rotas ---
 
-// Ferramentas de URL
+// Módulos de Análise de Web/URL
 app.use('/check/headers', validateUrl, headerRoutes);
 app.use('/check/server', validateUrl, serverRoutes);
 app.use('/check/cookies', validateUrl, cookieRoutes);
 app.use('/waf/scan', validateUrl, wafScan);
 
-// Ferramentas de Infra e Código
-app.use('/container/scan', validateDockerParams, dockerAnalysis); // Docker com Trivy/Scout
-app.use('/sast/scan', sastScan); // SAST com Horusec (recebe FormData/ZIP)
+// Módulos de Infraestrutura e Código
+app.use('/container/scan', validateDockerParams, dockerAnalysis); // Scanner de Imagens (Trivy/Scout)
+app.use('/sast/scan', sastScan); // Análise de Código (Horusec)
 
-// Rota de teste
+// --- Rota Base de Teste ---
 app.get('/', (req, res) => {
-    res.send('CyberSecurity Portal API - Uniceumar 2026');
+    res.json({
+        message: 'CyberSecurity Portal API - Ativa',
+        version: '1.0.0',
+        author: 'José Leandro de Sousa Silva',
+        tcc_project: 'Unicesumar 2026'
+    });
 });
 
+// --- Inicialização do Servidor ---
 app.listen(PORT, () => {
-    console.log(`[SERVER] API rodando em http://localhost:${PORT}`);
-    console.log(`[INFO] Middlewares de validação ativos.`);
+    console.log(`\x1b[32m%s\x1b[0m`, `[SERVER] API rodando com sucesso em http://localhost:${PORT}`);
+    console.log(`\x1b[36m%s\x1b[0m`, `[INFO] Middlewares de segurança e validação aplicados.`);
 });
