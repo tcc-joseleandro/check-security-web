@@ -2,28 +2,35 @@ const express = require('express');
 const { exec } = require('child_process');
 const router = express.Router();
 
-// Rota POST: /container/scan (ou conforme definido no seu index.js)
 router.post('/', (req, res) => {
-    const { image, scanner } = req.body;
+    const { image, scanner, username, password } = req.body;
 
-    // Validação básica
     if (!image) {
-        return res.status(400).json({ 
-            error: "O nome da imagem Docker é obrigatório." 
-        });
+        return res.status(400).json({ error: "O nome da imagem Docker é obrigatório." });
     }
 
-    // Seleção do comando baseada na escolha do Frontend
     let command = '';
+
     if (scanner === 'trivy') {
-        // Formato JSON, filtrando apenas vulnerabilidades de severidade relevante
         command = `trivy image --format json --severity CRITICAL,HIGH,MEDIUM ${image}`;
     } else {
-        // Comando padrão do Docker Scout
-        command = `docker-scout cves ${image} --format json`;
+        // Lógica para Docker Scout com Autenticação
+        // Se houver credenciais, fazemos o login e depois o scan na mesma linha (&&)
+        if (username && password) {
+            console.log(`[LOG] Realizando login no Docker Hub para o Scout...`);
+            // Usamos o --password-stdin para maior segurança via shell se preferir, 
+            // mas aqui simplificamos para o comando direto
+            command = `docker login -u "${username}" -p "${password}" && docker-scout cves ${image} --format json`;
+        } else {
+            command = `docker-scout cves ${image} --format json`;
+        }
     }
+
     console.log(`[LOG] Executando ${scanner} para a imagem: ${image}`);
+
     exec(command, { maxBuffer: 1024 * 10000 }, (error, stdout, stderr) => {
+        // Nota: O stdout do docker login pode aparecer aqui. 
+        // Se houver erro de login, o comando de scan nem executa devido ao &&
         if (error && !stdout) {
             return res.status(500).json({ 
                 error: `Erro ao executar o scanner ${scanner}`, 
@@ -32,7 +39,13 @@ router.post('/', (req, res) => {
         }
 
         try {
-            const scanData = JSON.parse(stdout);
+            // Se houver login, o stdout pode conter a frase "Login Succeeded" antes do JSON.
+            // Vamos limpar o stdout para pegar apenas o JSON válido.
+            const jsonStartIndex = stdout.indexOf('{');
+            const jsonString = stdout.substring(jsonStartIndex);
+            
+            const scanData = JSON.parse(jsonString);
+            
             let report = {
                 image: image,
                 scanner_used: scanner === 'trivy' ? 'Trivy' : 'Docker Scout',
@@ -41,9 +54,8 @@ router.post('/', (req, res) => {
                 medium: 0
             };
 
-            // --- Lógica de Parse do TRIVY ---
             if (scanner === 'trivy') {
-                if (scanData.Results && Array.isArray(scanData.Results)) {
+                if (scanData.Results) {
                     scanData.Results.forEach(target => {
                         if (target.Vulnerabilities) {
                             target.Vulnerabilities.forEach(v => {
@@ -55,17 +67,13 @@ router.post('/', (req, res) => {
                         }
                     });
                 }
-            } 
-            // --- Lógica de Parse do DOCKER SCOUT ---
-            else {
-                // Tenta ler do sumário (mais comum em versões recentes)
+            } else {
+                // Parse Docker Scout
                 if (scanData.summary) {
                     report.critical = scanData.summary.critical || 0;
                     report.high = scanData.summary.high || 0;
                     report.medium = scanData.summary.medium || 0;
-                } 
-                // Fallback para varredura manual de objetos se o sumário não existir
-                else if (scanData.runs && scanData.runs[0].results) {
+                } else if (scanData.runs && scanData.runs[0].results) {
                     scanData.runs[0].results.forEach(res => {
                         const score = res.properties?.['security-severity'] || 0;
                         if (score >= 9.0) report.critical++;
@@ -75,15 +83,14 @@ router.post('/', (req, res) => {
                 }
             }
 
-            // Retorna o relatório consolidado
             res.json(report);
 
         } catch (parseError) {
             console.error("Erro no Parse JSON:", parseError);
             res.status(500).json({ 
                 error: "Falha ao processar os dados da análise", 
-                details: "O scanner não retornou um JSON válido.",
-                rawPrefix: stdout ? stdout.substring(0, 150) : "Nenhuma saída"
+                details: "Saída inválida do scanner.",
+                raw: stdout ? stdout.substring(0, 200) : "Vazio"
             });
         }
     });

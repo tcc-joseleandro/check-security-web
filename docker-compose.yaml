@@ -1,0 +1,33 @@
+services:
+  # --- Serviço do Backend (API de Segurança) ---
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cybersec-api
+    ports:
+      - "3000:3000"
+    # environment:
+    #   - NODE_ENV=production
+    networks:
+      - security-network
+
+  # --- Serviço do Frontend (React + Vite) ---
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cybersec-ui
+    ports:
+      - "80:5173" # Porta padrão do Vite
+    environment:
+      - VITE_API_URL=http://localhost:3000
+    depends_on:
+      - backend
+    networks:
+      - security-network
+
+# --- Rede isolada para os containers se comunicarem ---
+networks:
+  security-network:
+    driver: bridge
