@@ -19,6 +19,8 @@ RUN  wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg -
     && echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" | tee -a /etc/apt/sources.list.d/trivy.list \
     && apt-get update && apt-get install trivy
 
+RUN trivy image --download-db-only
+
 RUN curl -sSfL https://raw.githubusercontent.com/docker/scout-cli/main/install.sh \
     && sh -s -- -b /usr/local/bin
 
