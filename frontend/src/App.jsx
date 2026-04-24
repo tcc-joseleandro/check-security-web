@@ -129,7 +129,7 @@ function App() {
           CyberSecurity Portal
         </h1>
         <p style={{ color: '#94a3b8', maxWidth: '600px', margin: '0 auto' }}>
-          Sistema de Auditoria TCC - Uniceumar 2026
+          Sistema de Auditoria TCC - Unicesumar 2026
         </p>
       </header>
 
