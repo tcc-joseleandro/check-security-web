@@ -36,7 +36,7 @@ cd check-security-web
 Na raiz do projeto (onde está o arquivo docker-compose.yaml), execute:
 
 Bash
-docker-compose up --build
+docker compose up --build
 Este comando irá baixar as imagens base, instalar as ferramentas de segurança (Trivy, Horusec, etc.) e subir os serviços.
 
 3. Acessar o Portal
