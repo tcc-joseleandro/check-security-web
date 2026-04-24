@@ -141,7 +141,6 @@ const SastScan = () => {
     );
 };
 
-// --- Estilos Auxiliares ---
 const containerStyle = {
     backgroundColor: '#1e293b',
     padding: '40px',

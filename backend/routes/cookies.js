@@ -23,7 +23,6 @@ router.get('/', async (req, res) => {
             category: "Cookie Security Audit",
             total_found: cookies.length,
             cookies: analysis,
-            // O veredito ajuda na exportação para destacar riscos rapidamente
             verdict: analysis.every(c => c.secure && c.httpOnly) 
                 ? "Seguro" 
                 : "Vulnerável"

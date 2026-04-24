@@ -34,7 +34,6 @@ const DockerScanner = () => {
     }
   };
 
-  // --- Funções de Exportação ---
 
   const exportJSON = () => {
     const dataStr = JSON.stringify(result, null, 2);
@@ -155,7 +154,6 @@ const DockerScanner = () => {
   );
 };
 
-// --- Estilos Adicionais ---
 
 const authBoxStyle = {
   display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', padding: '20px', 
@@ -187,7 +185,6 @@ const exportButtonStyle = {
   transition: 'all 0.2s'
 };
 
-// ... Reutilizar os outros estilos (inputStyle, buttonStyle, resultCardStyle, etc.) do seu código original
 const inputStyle = { width: '100%', padding: '12px 15px', borderRadius: '8px', border: '1px solid #334155', backgroundColor: '#0f172a', color: 'white', outline: 'none', fontSize: '0.9rem' };
 const iconInputStyle = { position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' };
 const buttonStyle = { backgroundColor: '#38bdf8', color: '#0f172a', padding: '0 30px', borderRadius: '8px', fontWeight: 'bold', border: 'none', display: 'flex', alignItems: 'center', gap: '8px' };

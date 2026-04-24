@@ -17,7 +17,6 @@ router.get('/', async (req, res) => {
         res.json({
             category: "Security Headers",
             data: data,
-            // Útil para o CSV: gera uma string de recomendações baseada no que falta
             missing: Object.keys(data).filter(key => !data[key]).join(', ') || "Nenhum"
         });
     } catch (err) { res.status(500).json({ error: err.message }); }

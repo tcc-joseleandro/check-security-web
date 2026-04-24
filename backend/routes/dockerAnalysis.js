@@ -11,7 +11,6 @@ router.post('/', (req, res) => {
     if (scanner === 'trivy') {
         command = `trivy image --format json --severity CRITICAL,HIGH,MEDIUM ${image}`;
     } else {
-        // Docker Scout com Login
         command = (username && password) 
             ? `docker login -u "${username}" -p "${password}" && docker-scout cves ${image} --format json`
             : `docker-scout cves ${image} --format json`;
@@ -23,7 +22,6 @@ router.post('/', (req, res) => {
         }
 
         try {
-            // Limpa o stdout para pegar apenas o JSON (ignora mensagens de login)
             const jsonString = stdout.substring(stdout.indexOf('{'));
             const scanData = JSON.parse(jsonString);
             

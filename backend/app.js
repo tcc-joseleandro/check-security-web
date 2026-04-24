@@ -3,7 +3,6 @@ const cors = require('cors');
 const app = express();
 const PORT = 3000;
 
-// --- Importação dos Módulos de Rotas ---
 const headerRoutes = require('./routes/headers');
 const serverRoutes = require('./routes/server');
 const cookieRoutes = require('./routes/cookies');
@@ -11,20 +10,15 @@ const dockerAnalysis = require('./routes/dockerAnalysis');
 const wafScan = require('./routes/wafScan');
 const sastScan = require('./routes/sastScan');
 
-// --- Middlewares Globais ---
-
-// CORS: Permite que o seu Frontend (geralmente na porta 5173 ou 3000) acesse a API
 app.use(cors()); 
 
-// Permite que o Express entenda o corpo das requisições em formato JSON
 app.use(express.json()); 
-
-// --- Middlewares de Validação ---
 
 /**
  * Validação para ferramentas de análise de URL (Headers, Cookies e WAF)
  * Garante que a URL seja enviada e que utilize o protocolo seguro HTTPS.
  */
+
 const validateUrl = (req, res, next) => {
     const url = req.body?.url || req.query?.url;
 
@@ -37,10 +31,7 @@ const validateUrl = (req, res, next) => {
     });
 };
 
-/**
- * Validação para ferramentas de Infra (Docker)
- * Verifica se a imagem foi informada e se o scanner solicitado é válido.
- */
+
 const validateDockerParams = (req, res, next) => {
     const { image, scanner, username, password } = req.body;
     
@@ -53,8 +44,6 @@ const validateDockerParams = (req, res, next) => {
         return res.status(400).json({ error: "Scanner inválido. Use 'trivy' ou 'docker-scout'." });
     }
 
-    // Se o usuário optar pelo Docker Scout e preencher um dos campos de login,
-    // garantimos que ele preencha ambos (User e PAT)
     if (scanner === 'docker-scout' && (username || password)) {
         if (!username || !password) {
             return res.status(400).json({ 
@@ -66,19 +55,15 @@ const validateDockerParams = (req, res, next) => {
     next();
 };
 
-// --- Aplicação das Rotas ---
 
-// Módulos de Análise de Web/URL
 app.use('/check/headers', validateUrl, headerRoutes);
 app.use('/check/server', validateUrl, serverRoutes);
 app.use('/check/cookies', validateUrl, cookieRoutes);
 app.use('/waf/scan', validateUrl, wafScan);
 
-// Módulos de Infraestrutura e Código
-app.use('/container/scan', validateDockerParams, dockerAnalysis); // Scanner de Imagens (Trivy/Scout)
-app.use('/sast/scan', sastScan); // Análise de Código (Horusec)
+app.use('/container/scan', validateDockerParams, dockerAnalysis); 
+app.use('/sast/scan', sastScan); 
 
-// --- Rota Base de Teste ---
 app.get('/', (req, res) => {
     res.json({
         message: 'CyberSecurity Portal API - Ativa',
@@ -88,7 +73,6 @@ app.get('/', (req, res) => {
     });
 });
 
-// --- Inicialização do Servidor ---
 app.listen(PORT, () => {
     console.log(`\x1b[32m%s\x1b[0m`, `[SERVER] API rodando com sucesso em http://localhost:${PORT}`);
     console.log(`\x1b[36m%s\x1b[0m`, `[INFO] Middlewares de segurança e validação aplicados.`);
